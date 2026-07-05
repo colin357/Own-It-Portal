@@ -1,0 +1,81 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role == 'admin';
+    }
+
+    function isClientUser() {
+      return isSignedIn() && request.auth.token.role == 'client';
+    }
+
+    function isMyClient(clientId) {
+      return isClientUser() && request.auth.token.clientId == clientId;
+    }
+
+    // ----- Portal collections (new; old data in this project is untouched) -----
+
+    match /clients/{clientId} {
+      allow read: if isAdmin() || isMyClient(clientId);
+      allow create, delete: if isAdmin();
+      // Clients may only update their own doc, and only safe fields.
+      allow update: if isAdmin()
+        || (isMyClient(clientId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name', 'notes']));
+    }
+
+    match /portalUsers/{uid} {
+      allow read: if isAdmin()
+        || request.auth.uid == uid
+        || (isClientUser() && resource.data.clientId == request.auth.token.clientId);
+      allow write: if isAdmin();
+      // Users may update their own display name only.
+      allow update: if request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['displayName']);
+    }
+
+    match /tags/{tagId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /taskTemplates/{templateId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAdmin() || isMyClient(resource.data.clientId);
+      allow create: if isAdmin()
+        || (isMyClient(request.resource.data.clientId));
+      allow update: if isAdmin()
+        || (isMyClient(resource.data.clientId)
+            && request.resource.data.clientId == resource.data.clientId);
+      allow delete: if isAdmin();
+    }
+
+    match /contentItems/{itemId} {
+      allow read: if isAdmin() || isMyClient(resource.data.clientId);
+      allow create: if isAdmin()
+        || (isMyClient(request.resource.data.clientId));
+      allow update: if isAdmin()
+        || (isMyClient(resource.data.clientId)
+            && request.resource.data.clientId == resource.data.clientId);
+      allow delete: if isAdmin();
+    }
+
+    match /invites/{inviteId} {
+      // Creation and acceptance happen server-side via the Admin SDK.
+      allow read: if isAdmin() || isMyClient(resource.data.clientId);
+      allow update: if isAdmin(); // e.g. revoking
+      allow create, delete: if isAdmin();
+    }
+  }
+}

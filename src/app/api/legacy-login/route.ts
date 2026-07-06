@@ -32,7 +32,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
   }
 
-  const db = adminDb();
+  let db;
+  try {
+    db = adminDb();
+    // Cheap connectivity probe so credential/parse problems surface as a clear message.
+    await db.collection("adminUsers").limit(1).get();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("legacy-login: Firebase admin init failed:", err);
+    return NextResponse.json(
+      {
+        error: `Server-side Firebase setup failed: ${msg}. Check that FIREBASE_SERVICE_ACCOUNT_KEY in Vercel is the complete service-account JSON (or its base64), with no extra quotes or truncation.`,
+      },
+      { status: 500 }
+    );
+  }
 
   // Admins first, then client users — same as the old portal.
   const adminsSnap = await db.collection("adminUsers").get();

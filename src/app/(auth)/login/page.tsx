@@ -29,7 +29,11 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password }),
         });
         const text = await res.text();
-        let data: { error?: string; token?: string; profile?: { role: string } };
+        let data: {
+          error?: string;
+          token?: string;
+          profile?: { role: "admin" | "client"; clientId: string | null; email: string; displayName: string };
+        };
         try {
           data = JSON.parse(text);
         } catch {
@@ -39,7 +43,9 @@ export default function LoginPage() {
               : `Server returned an unexpected response (${res.status}).`
           );
         }
-        if (!res.ok) throw new Error(data.error ?? "Could not log in.");
+        if (!res.ok || !data.token || !data.profile) {
+          throw new Error(data.error ?? "Could not log in.");
+        }
         setLegacySession({ token: data.token, profile: data.profile });
         // Full reload so AuthProvider picks up the new session.
         window.location.href = data.profile.role === "admin" ? "/admin" : "/portal";

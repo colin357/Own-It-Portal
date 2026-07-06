@@ -28,7 +28,17 @@ export default function LoginPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
-        const data = await res.json();
+        const text = await res.text();
+        let data: { error?: string; token?: string; profile?: { role: string } };
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(
+            res.status === 404
+              ? "The legacy login endpoint is missing — the deployed build is out of date. Redeploy the latest code."
+              : `Server returned an unexpected response (${res.status}).`
+          );
+        }
         if (!res.ok) throw new Error(data.error ?? "Could not log in.");
         setLegacySession({ token: data.token, profile: data.profile });
         // Full reload so AuthProvider picks up the new session.

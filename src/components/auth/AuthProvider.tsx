@@ -19,6 +19,7 @@ interface AuthState {
   role: Role | null;
   clientId: string | null;
   loading: boolean;
+  roleError: string | null;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthState>({
   role: null,
   clientId: null,
   loading: true,
+  roleError: null,
   refresh: async () => {},
   logout: async () => {},
 });
@@ -43,13 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   const loadClaims = useCallback(async (u: User, forceRefresh = false) => {
     let token = await u.getIdTokenResult(forceRefresh);
     let claimRole = (token.claims.role as Role | undefined) ?? null;
 
     // If no role claim yet, ask the server to bootstrap (admin whitelist) and retry once.
-    if (!claimRole && !forceRefresh) {
+    if (!claimRole) {
       try {
         const res = await fetch("/api/auth/bootstrap", {
           method: "POST",
@@ -58,10 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           token = await u.getIdTokenResult(true);
           claimRole = (token.claims.role as Role | undefined) ?? null;
+          setRoleError(null);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          setRoleError(
+            `Role setup failed (${res.status}): ${data.error ?? "unknown error"}`
+          );
         }
-      } catch {
-        // Non-fatal: user simply has no role yet.
+      } catch (err) {
+        setRoleError(
+          `Could not reach the server to set up your role: ${err instanceof Error ? err.message : "network error"}`
+        );
       }
+    } else {
+      setRoleError(null);
     }
 
     setRole(claimRole);
@@ -105,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, role, clientId, loading, refresh, logout }}
+      value={{ user, profile, role, clientId, loading, roleError, refresh, logout }}
     >
       {children}
     </AuthContext.Provider>

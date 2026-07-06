@@ -14,7 +14,8 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
     if (loading) return;
     if (!user) router.replace("/login");
     else if (userRole !== role) {
-      router.replace(userRole === "admin" ? "/admin" : userRole === "client" ? "/portal" : "/login");
+      // No role at all -> home page, which explains the problem instead of looping.
+      router.replace(userRole === "admin" ? "/admin" : userRole === "client" ? "/portal" : "/");
     }
   }, [user, userRole, loading, role, router]);
 

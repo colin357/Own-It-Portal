@@ -71,6 +71,21 @@ This app uses your **existing Firebase project** but only new, portal-specific c
 - **Videos**: paste a Loom share link or Google Drive file link on a task or template — it renders as an embedded player. Drive files need link sharing enabled.
 - **Security**: Firestore/Storage rules scope every read and write by the `role` / `clientId` custom claims; privileged flows (signup, invites, role granting) run server-side with the Admin SDK.
 
+## Migrating data from the old portal
+
+`scripts/migrate.js` copies the old portal's collections (`users`, `groups`, `adminUsers`, `content`, `calendarEvents`, `videos`) into the new schema in the same project. Old data is never modified or deleted, with one deliberate exception: plaintext `password` fields are removed from `users`/`adminUsers` after proper Firebase Auth accounts are created (existing passwords keep working).
+
+```bash
+# put service-account.json in the project root (gitignored), then:
+npm run migrate            # dry run — prints everything it would do
+npm run migrate -- --commit  # actually migrate
+```
+
+Details:
+- Every migrated doc gets a `legacyId` and a deterministic ID, so re-running updates in place (no duplicates).
+- `groups` → tags; `users` → clients + owner logins (+ four onboarding tasks marked done/open from old progress; onboarding answers preserved in client notes); `content`/`calendarEvents` → content items with scheduled dates; `videos` → copied into `portal/{clientId}/uploads/` Storage so they show on Files pages.
+- `adminActivities`, `dailyTasks`, and `dailyTaskCompletions` are intentionally not migrated (old audit log; recurring daily tasks have no equivalent yet).
+
 ## Ideas for later
 
 - Email notifications (invites, overdue task digests) via Resend or similar

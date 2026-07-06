@@ -20,6 +20,10 @@ A client portal for Own It Social built with Next.js (App Router), TypeScript, T
 - Onboarding task templates — active templates are auto-assigned to every new signup, and can be re-applied to existing clients
 - Tags to group and filter clients (by package, industry, etc.)
 
+**Integrations**
+- **Twilio SMS**: a daily cron job (see `vercel.json`, runs 15:00 UTC) texts clients who have tasks overdue or due within 24 hours (clients opt in by saving a mobile number on their Team page — at most one reminder per day per client), and teammate invites can be texted directly when a phone number is entered.
+- **OpenAI**: a "✨ Generate ideas" button on the content pages (client portal and admin client view) drafts five content ideas tailored to the client's business, tags, and existing content; any of them can be added to the content list with one click.
+
 ## Setup
 
 This app uses your **existing Firebase project** but only new, portal-specific collections (`clients`, `portalUsers`, `tasks`, `taskTemplates`, `contentItems`, `tags`, `invites`) and the `portal/` folder in Storage — existing data is untouched.
@@ -39,6 +43,7 @@ This app uses your **existing Firebase project** but only new, portal-specific c
    - Fill in the `NEXT_PUBLIC_FIREBASE_*` values from Firebase console → Project settings → General → Your apps (add a Web app if you don't have one).
    - Generate a service account key (Project settings → Service accounts → Generate new private key) and set `FIREBASE_SERVICE_ACCOUNT_KEY` to the base64-encoded JSON: `base64 -w0 service-account.json`.
    - Set `ADMIN_EMAILS` to a comma-separated list of your team's emails. Those accounts become admins on first login.
+   - Optional integrations: set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` for SMS reminders/invites (plus `CRON_SECRET` to lock down the cron endpoint and `NEXT_PUBLIC_APP_URL` so texted links point at your production domain), and `OPENAI_API_KEY` for AI content ideas. Everything degrades gracefully if these are missing.
 
 3. **Enable Email/Password auth** in Firebase console → Authentication → Sign-in method.
 

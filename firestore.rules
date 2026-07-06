@@ -28,7 +28,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (isMyClient(clientId)
             && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['name', 'notes']));
+               .hasOnly(['name', 'notes', 'phone']));
     }
 
     match /portalUsers/{uid} {

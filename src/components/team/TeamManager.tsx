@@ -20,9 +20,11 @@ export function TeamManager({ clientId }: { clientId: string }) {
   );
 
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newLink, setNewLink] = useState<string | null>(null);
+  const [smsSent, setSmsSent] = useState(false);
   const [copied, setCopied] = useState(false);
 
   async function invite(e: FormEvent) {
@@ -38,12 +40,14 @@ export function TeamManager({ clientId }: { clientId: string }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email, clientId }),
+        body: JSON.stringify({ email, clientId, phone: phone.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create invite.");
       setNewLink(`${window.location.origin}/join/${data.inviteId}`);
+      setSmsSent(Boolean(data.smsSent));
       setEmail("");
+      setPhone("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create invite.");
     }
@@ -87,8 +91,8 @@ export function TeamManager({ clientId }: { clientId: string }) {
           Add an assistant or colleague — they’ll get their own login with access to this
           account.
         </p>
-        <form onSubmit={invite} className="flex items-end gap-3">
-          <div className="flex-1">
+        <form onSubmit={invite} className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[200px] flex-1">
             <Label htmlFor="invite-email">Their email</Label>
             <Input
               id="invite-email"
@@ -99,6 +103,16 @@ export function TeamManager({ clientId }: { clientId: string }) {
               placeholder="assistant@example.com"
             />
           </div>
+          <div className="min-w-[160px] flex-1">
+            <Label htmlFor="invite-phone">Their mobile (optional — texts the link)</Label>
+            <Input
+              id="invite-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(555) 123-4567"
+            />
+          </div>
           <Button type="submit" disabled={busy}>
             {busy ? "Creating…" : "Create invite"}
           </Button>
@@ -107,7 +121,8 @@ export function TeamManager({ clientId }: { clientId: string }) {
         {newLink && (
           <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
             <p className="text-sm font-medium text-green-800">
-              Invite created! Send them this link:
+              Invite created!{" "}
+              {smsSent ? "We texted them the link — you can also share it directly:" : "Send them this link:"}
             </p>
             <div className="mt-2 flex items-center gap-2">
               <code className="flex-1 truncate rounded bg-white px-2 py-1 text-xs text-gray-700">

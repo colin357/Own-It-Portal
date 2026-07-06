@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminAuth, adminDb, isAdminConfigured } from "@/lib/firebase/admin";
+import { isTwilioConfigured, normalizePhone, sendSms } from "@/lib/twilio";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }
 
-  let body: { email?: string; clientId?: string };
+  let body: { email?: string; clientId?: string; phone?: string };
   try {
     body = await req.json();
   } catch {
@@ -51,5 +52,23 @@ export async function POST(req: Request) {
     expiresAt: Timestamp.fromMillis(Date.now() + INVITE_TTL_DAYS * 86400000),
   });
 
-  return NextResponse.json({ inviteId: ref.id });
+  // Optionally text the invite link to the teammate.
+  let smsSent = false;
+  if (body.phone && isTwilioConfigured()) {
+    const phone = normalizePhone(body.phone);
+    if (phone) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(req.url).origin;
+      try {
+        await sendSms(
+          phone,
+          `You've been invited to the Own It Social client portal. Set up your login here: ${appUrl}/join/${ref.id}`
+        );
+        smsSent = true;
+      } catch (err) {
+        console.error("Invite SMS failed:", err);
+      }
+    }
+  }
+
+  return NextResponse.json({ inviteId: ref.id, smsSent });
 }

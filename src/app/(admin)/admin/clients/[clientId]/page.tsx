@@ -24,6 +24,7 @@ import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskList } from "@/components/tasks/TaskList";
 import { ContentForm } from "@/components/content/ContentForm";
 import { ContentList } from "@/components/content/ContentList";
+import { IdeaGenerator } from "@/components/content/IdeaGenerator";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { FileManager } from "@/components/files/FileManager";
 import { TeamManager } from "@/components/team/TeamManager";
@@ -204,7 +205,8 @@ export default function ClientDetailPage() {
 
       {tab === "content" && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <IdeaGenerator clientId={clientId} />
             <Button onClick={() => setNewContent(true)}>+ New content</Button>
           </div>
           <ContentList

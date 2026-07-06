@@ -11,6 +11,8 @@ export interface Client {
   tagIds: string[];
   ownerUid: string;
   notes: string;
+  phone?: string | null;
+  lastTaskReminderAt?: Timestamp | null;
   createdAt: Timestamp;
 }
 

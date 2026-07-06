@@ -7,6 +7,7 @@ import { useCollection } from "@/lib/firestore/hooks";
 import { Button, Modal, Spinner, Tabs } from "@/components/ui";
 import { ContentForm } from "@/components/content/ContentForm";
 import { ContentList } from "@/components/content/ContentList";
+import { IdeaGenerator } from "@/components/content/IdeaGenerator";
 import type { ContentItem, ContentType } from "@/lib/types";
 
 const TABS: { key: string; label: string; type: ContentType | null }[] = [
@@ -34,7 +35,10 @@ export default function ClientContentPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Content</h1>
-        <Button onClick={() => setCreating(true)}>+ Submit an idea</Button>
+        <div className="flex gap-2">
+          <IdeaGenerator clientId={clientId ?? ""} />
+          <Button onClick={() => setCreating(true)}>+ Submit an idea</Button>
+        </div>
       </div>
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       {loading ? (

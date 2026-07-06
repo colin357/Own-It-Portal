@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TeamManager } from "@/components/team/TeamManager";
+import { SmsSettings } from "@/components/team/SmsSettings";
 import { Spinner } from "@/components/ui";
 
 export default function ClientTeamPage() {
@@ -12,6 +13,7 @@ export default function ClientTeamPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Team</h1>
       <TeamManager clientId={clientId} />
+      <SmsSettings clientId={clientId} />
     </div>
   );
 }

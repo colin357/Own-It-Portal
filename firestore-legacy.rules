@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// TEMPORARY rules for the pre-launch legacy-auth period (NEXT_PUBLIC_LEGACY_AUTH=true).
+// Legacy sessions don't authenticate with Firebase, so reads/writes arrive without
+// request.auth — this mirrors the old portal's open access.
+//
+// ⚠️ Do NOT go live with these. Before launch: enable Firebase Auth login,
+// set NEXT_PUBLIC_LEGACY_AUTH=false, and deploy firestore.rules instead.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

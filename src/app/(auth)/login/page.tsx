@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
+import { isLegacyMode, setLegacySession } from "@/lib/clientSession";
 import { Button, Input, Label } from "@/components/ui";
 
 export default function LoginPage() {
@@ -18,6 +19,27 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+
+    // TEMPORARY pre-launch mode: check credentials against the old Firestore docs.
+    if (isLegacyMode) {
+      try {
+        const res = await fetch("/api/legacy-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Could not log in.");
+        setLegacySession({ token: data.token, profile: data.profile });
+        // Full reload so AuthProvider picks up the new session.
+        window.location.href = data.profile.role === "admin" ? "/admin" : "/portal";
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not log in.");
+        setBusy(false);
+      }
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(firebaseAuth(), email, password);
       router.replace("/");

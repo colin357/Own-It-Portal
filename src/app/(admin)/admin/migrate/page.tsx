@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getAuthToken } from "@/lib/clientSession";
 import { Button } from "@/components/ui";
 
 interface Result {
@@ -28,7 +28,7 @@ export default function MigratePage() {
     setError(null);
     setResult(null);
     try {
-      const token = await firebaseAuth().currentUser?.getIdToken();
+      const token = await getAuthToken();
       const res = await fetch(`/api/admin/migrate${commit ? "?commit=true" : ""}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },

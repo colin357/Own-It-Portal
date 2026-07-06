@@ -152,15 +152,25 @@ async function runMigration({ db, auth, storage, defaultBucket, commit, log }) {
     );
 
     const displayName = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email;
-    const { uid, created } = await ensureAuthUser({
-      email: u.email,
-      password: u.password,
-      displayName,
-    });
-    log(`client: "${u.companyName}" owner ${u.email} (auth ${created ? "created" : "exists"})`);
+    let uid;
+    let authOk = false;
+    try {
+      const res = await ensureAuthUser({ email: u.email, password: u.password, displayName });
+      uid = res.uid;
+      authOk = true;
+      log(`client: "${u.companyName}" owner ${u.email} (auth ${res.created ? "created" : "exists"})`);
+    } catch (err) {
+      // Firebase Auth unavailable (e.g. legacy-auth period) — keep a
+      // Firestore-only identity; password stays on the old doc for legacy login.
+      uid = `legacy-${doc.id}`;
+      count("auth-failures");
+      log(`client: "${u.companyName}" owner ${u.email} (WARN auth failed: ${err.message} — Firestore-only)`);
+    }
 
     if (commit) {
-      await auth.setCustomUserClaims(uid, { role: "client", clientId: clientRef.id });
+      if (authOk) {
+        await auth.setCustomUserClaims(uid, { role: "client", clientId: clientRef.id });
+      }
       await clientRef.set({ ownerUid: uid }, { merge: true });
     }
     await setDoc(
@@ -205,7 +215,8 @@ async function runMigration({ db, auth, storage, defaultBucket, commit, log }) {
       );
     }
 
-    if (commit && u.password) {
+    // Only remove the plaintext password once a real Auth login exists.
+    if (commit && u.password && authOk) {
       await doc.ref.update({ password: FieldValue.delete() });
       count("passwords-scrubbed");
     }
@@ -216,13 +227,19 @@ async function runMigration({ db, auth, storage, defaultBucket, commit, log }) {
   for (const doc of adminsSnap.docs) {
     const a = doc.data();
     if (!a.email) continue;
-    const { uid, created } = await ensureAuthUser({
-      email: a.email,
-      password: a.password,
-      displayName: a.name,
-    });
-    log(`admin: ${a.email} (auth ${created ? "created" : "exists"})`);
-    if (commit) await auth.setCustomUserClaims(uid, { role: "admin", clientId: null });
+    let uid;
+    let authOk = false;
+    try {
+      const res = await ensureAuthUser({ email: a.email, password: a.password, displayName: a.name });
+      uid = res.uid;
+      authOk = true;
+      log(`admin: ${a.email} (auth ${res.created ? "created" : "exists"})`);
+    } catch (err) {
+      uid = `legacy-admin-${doc.id}`;
+      count("auth-failures");
+      log(`admin: ${a.email} (WARN auth failed: ${err.message} — Firestore-only)`);
+    }
+    if (commit && authOk) await auth.setCustomUserClaims(uid, { role: "admin", clientId: null });
     await setDoc(
       db.collection("portalUsers").doc(uid),
       {
@@ -236,7 +253,7 @@ async function runMigration({ db, auth, storage, defaultBucket, commit, log }) {
       },
       "admins"
     );
-    if (commit && a.password) {
+    if (commit && a.password && authOk) {
       await doc.ref.update({ password: FieldValue.delete() });
       count("passwords-scrubbed");
     }

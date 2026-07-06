@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db, firebaseAuth } from "@/lib/firebase/client";
+import { db } from "@/lib/firebase/client";
+import { getAuthToken } from "@/lib/clientSession";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Input, Label, Modal } from "@/components/ui";
 
@@ -24,7 +25,7 @@ export function IdeaGenerator({ clientId }: { clientId: string }) {
     setBusy(true);
     setError(null);
     try {
-      const token = await firebaseAuth().currentUser?.getIdToken();
+      const token = await getAuthToken();
       const res = await fetch("/api/ai/ideas", {
         method: "POST",
         headers: {

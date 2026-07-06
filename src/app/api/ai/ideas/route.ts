@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb, isAdminConfigured } from "@/lib/firebase/admin";
+import { adminDb, isAdminConfigured } from "@/lib/firebase/admin";
+import { verifyRequest } from "@/lib/serverAuth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -24,16 +25,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const authz = req.headers.get("authorization");
-  const idToken = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
-  if (!idToken) return NextResponse.json({ error: "Missing token." }, { status: 401 });
-
-  let decoded;
-  try {
-    decoded = await adminAuth().verifyIdToken(idToken);
-  } catch {
-    return NextResponse.json({ error: "Invalid token." }, { status: 401 });
-  }
+  const decoded = await verifyRequest(req);
+  if (!decoded) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
   let body: { clientId?: string; topic?: string };
   try {
@@ -42,7 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const clientId = decoded.role === "admin" ? body.clientId : (decoded.clientId as string);
+  const clientId = decoded.role === "admin" ? body.clientId : decoded.clientId;
   if (!clientId) {
     return NextResponse.json({ error: "Client is required." }, { status: 400 });
   }

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { orderBy, where } from "firebase/firestore";
 import { useCollection } from "@/lib/firestore/hooks";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getAuthToken } from "@/lib/clientSession";
 import { Badge, Button, EmptyState, Input, Label, Spinner } from "@/components/ui";
 import type { Invite, PortalUser } from "@/lib/types";
 
@@ -33,7 +33,7 @@ export function TeamManager({ clientId }: { clientId: string }) {
     setError(null);
     setNewLink(null);
     try {
-      const token = await firebaseAuth().currentUser?.getIdToken();
+      const token = await getAuthToken();
       const res = await fetch("/api/invite/create", {
         method: "POST",
         headers: {

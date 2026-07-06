@@ -71,6 +71,16 @@ This app uses your **existing Firebase project** but only new, portal-specific c
 - **Videos**: paste a Loom share link or Google Drive file link on a task or template — it renders as an embedded player. Drive files need link sharing enabled.
 - **Security**: Firestore/Storage rules scope every read and write by the `role` / `clientId` custom claims; privileged flows (signup, invites, role granting) run server-side with the Admin SDK.
 
+## Temporary legacy login mode (pre-launch)
+
+Setting `NEXT_PUBLIC_LEGACY_AUTH=true` makes the login page check credentials directly against the old portal's Firestore docs (`adminUsers`, then `users`) — the same behavior as the previous portal — instead of Firebase Authentication. All portal features (including the in-app migration page) work with these sessions.
+
+Requirements while this mode is on:
+- Firestore rules must allow unauthenticated access (the old portal's setup). If you've deployed the strict rules, switch back temporarily: `firestore-legacy.rules` is provided.
+- The migration keeps working; if Firebase Auth account creation fails it falls back to Firestore-only identities and leaves the old password fields in place so legacy login keeps working.
+
+**Before go-live:** fix the Firebase Auth configuration, set `NEXT_PUBLIC_LEGACY_AUTH=false`, re-run the migration (it will create the real logins and scrub plaintext passwords), and deploy the strict `firestore.rules`.
+
 ## Migrating data from the old portal
 
 `scripts/migrate.js` copies the old portal's collections (`users`, `groups`, `adminUsers`, `content`, `calendarEvents`, `videos`) into the new schema in the same project. Old data is never modified or deleted, with one deliberate exception: plaintext `password` fields are removed from `users`/`adminUsers` after proper Firebase Auth accounts are created (existing passwords keep working).

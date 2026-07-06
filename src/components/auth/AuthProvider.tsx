@@ -11,6 +11,11 @@ import {
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { firebaseAuth, db, isFirebaseConfigured } from "@/lib/firebase/client";
+import {
+  clearLegacySession,
+  getLegacySession,
+  isLegacyMode,
+} from "@/lib/clientSession";
 import type { PortalUser, Role } from "@/lib/types";
 
 interface AuthState {
@@ -89,6 +94,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // TEMPORARY pre-launch mode: session comes from /api/legacy-login
+    // (checked against the old Firestore users/adminUsers docs).
+    if (isLegacyMode) {
+      const session = getLegacySession();
+      if (session) {
+        const p = session.profile;
+        // Minimal stand-in for the Firebase User object (uid/email are all we use).
+        setUser({ uid: `legacy-${p.email}`, email: p.email } as unknown as User);
+        setRole(p.role);
+        setClientId(p.clientId);
+        setProfile({
+          uid: `legacy-${p.email}`,
+          email: p.email,
+          displayName: p.displayName,
+          role: p.role,
+          clientId: p.clientId,
+          isOwner: true,
+        } as PortalUser);
+      }
+      setLoading(false);
+      return;
+    }
     if (!isFirebaseConfigured) {
       setLoading(false);
       return;
@@ -108,11 +135,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadClaims]);
 
   const refresh = useCallback(async () => {
+    if (isLegacyMode) {
+      window.location.reload();
+      return;
+    }
     const u = firebaseAuth().currentUser;
     if (u) await loadClaims(u, true);
   }, [loadClaims]);
 
   const logout = useCallback(async () => {
+    if (isLegacyMode) {
+      clearLegacySession();
+      setUser(null);
+      setProfile(null);
+      setRole(null);
+      setClientId(null);
+      return;
+    }
     await signOut(firebaseAuth());
   }, []);
 

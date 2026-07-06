@@ -21,8 +21,18 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(firebaseAuth(), email, password);
       router.replace("/");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? "";
+      const messages: Record<string, string> = {
+        "auth/user-not-found": "No account exists with this email.",
+        "auth/wrong-password": "Incorrect password.",
+        "auth/invalid-credential": "Incorrect email or password.",
+        "auth/too-many-requests": "Too many attempts — wait a few minutes and try again.",
+        "auth/operation-not-allowed":
+          "Email/password sign-in is not enabled in Firebase (console → Authentication → Sign-in method).",
+        "auth/network-request-failed": "Network error — check your connection and try again.",
+      };
+      setError(messages[code] ?? `Could not log in (${code || "unknown error"}).`);
       setBusy(false);
     }
   }

@@ -10,6 +10,7 @@ const NAV: NavItem[] = [
   { href: "/admin/clients", label: "Clients", icon: "👥" },
   { href: "/admin/templates", label: "Onboarding Templates", icon: "✅" },
   { href: "/admin/tags", label: "Tags", icon: "🏷️" },
+  { href: "/admin/migrate", label: "Migration", icon: "📦" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

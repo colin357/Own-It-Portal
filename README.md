@@ -75,6 +75,10 @@ This app uses your **existing Firebase project** but only new, portal-specific c
 
 `scripts/migrate.js` copies the old portal's collections (`users`, `groups`, `adminUsers`, `content`, `calendarEvents`, `videos`) into the new schema in the same project. Old data is never modified or deleted, with one deliberate exception: plaintext `password` fields are removed from `users`/`adminUsers` after proper Firebase Auth accounts are created (existing passwords keep working).
 
+**Option A — from the deployed portal (easiest):** log in as an admin and open **Migration** in the sidebar (`/admin/migrate`). Run the dry run, review the log, then "Migrate for real". Uses the deployment's own service account; nothing to install.
+
+**Option B — from the command line:**
+
 ```bash
 # put service-account.json in the project root (gitignored), then:
 npm run migrate            # dry run — prints everything it would do

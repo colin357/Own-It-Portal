@@ -24,6 +24,7 @@ import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskList } from "@/components/tasks/TaskList";
 import { ContentForm } from "@/components/content/ContentForm";
 import { ContentList } from "@/components/content/ContentList";
+import { BulkContentAdd } from "@/components/content/BulkContentAdd";
 import { IdeaGenerator } from "@/components/content/IdeaGenerator";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { FileManager } from "@/components/files/FileManager";
@@ -45,6 +46,7 @@ export default function ClientDetailPage() {
   const [applying, setApplying] = useState(false);
   const [newTask, setNewTask] = useState(false);
   const [newContent, setNewContent] = useState(false);
+  const [bulkContent, setBulkContent] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
   const { data: client, loading } = useDoc<Client>(`clients/${clientId}`);
@@ -207,6 +209,9 @@ export default function ClientDetailPage() {
         <div className="space-y-4">
           <div className="flex justify-end gap-2">
             <IdeaGenerator clientId={clientId} />
+            <Button variant="secondary" onClick={() => setBulkContent(true)}>
+              Bulk add
+            </Button>
             <Button onClick={() => setNewContent(true)}>+ New content</Button>
           </div>
           <ContentList
@@ -226,6 +231,14 @@ export default function ClientDetailPage() {
       </Modal>
       <Modal open={newContent} onClose={() => setNewContent(false)} title="New content" wide>
         <ContentForm clientId={clientId} onDone={() => setNewContent(false)} />
+      </Modal>
+      <Modal
+        open={bulkContent}
+        onClose={() => setBulkContent(false)}
+        title="Bulk add content ideas"
+        wide
+      >
+        <BulkContentAdd clientId={clientId} onDone={() => setBulkContent(false)} />
       </Modal>
     </div>
   );

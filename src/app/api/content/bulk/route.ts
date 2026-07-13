@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb, isAdminConfigured } from "@/lib/firebase/admin";
-import { verifyRequest } from "@/lib/serverAuth";
 import {
   BULK_MAX_ITEMS,
   flattenBulkPayload,
@@ -19,10 +18,9 @@ const BATCH_LIMIT = 500;
  * in one request. Built for automation: run it from a script, a spreadsheet
  * export, Zapier/Make, etc. instead of adding ideas one at a time in the UI.
  *
- * Auth — either works:
- *   - An admin Firebase ID token:  Authorization: Bearer <idToken>
- *   - A shared key (BULK_UPLOAD_SECRET):  Authorization: Bearer <secret>
- *     or  X-API-Key: <secret>
+ * This endpoint is intentionally unauthenticated — anyone who can reach the URL
+ * can create content ideas. It only ever creates `contentItems` (no reads,
+ * updates, or deletes) and is capped per request.
  *
  * Body (see src/lib/bulkContent.ts for the full shape). Simplest form:
  *   {
@@ -47,24 +45,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- Auth: shared upload key, or an admin session token. ---
-  const secret = process.env.BULK_UPLOAD_SECRET;
-  const authz = req.headers.get("authorization");
-  const bearer = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
-  const apiKey = req.headers.get("x-api-key") ?? bearer;
-  const viaKey = Boolean(secret) && apiKey === secret;
-
-  let creatorUid = "bulk-api";
-  if (!viaKey) {
-    const decoded = await verifyRequest(req);
-    if (!decoded) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-    }
-    if (decoded.role !== "admin") {
-      return NextResponse.json({ error: "Admins only." }, { status: 403 });
-    }
-    creatorUid = decoded.uid;
-  }
+  const creatorUid = "bulk-api";
 
   let payload: unknown;
   try {

@@ -93,10 +93,9 @@ be set later by editing an item.
 or many clients in a single call — wire it to a spreadsheet export, Zapier/Make,
 or a cron script.
 
-- **Auth (either):**
-  - Set `BULK_UPLOAD_SECRET` in your environment and send it as
-    `Authorization: Bearer <secret>` or `X-API-Key: <secret>`.
-  - Or send an admin's Firebase ID token as `Authorization: Bearer <idToken>`.
+- **No auth required.** The endpoint is open: anyone who can reach the URL can
+  create content ideas. It only ever *creates* `contentItems` (no reads,
+  updates, or deletes) and is capped at 1000 items per request.
 - **Reference clients** by `clientId` or by `clientName` (case-insensitive; the
   name must be unique). Top-level `type`, `status`, `clientId`, and `clientName`
   act as defaults every item inherits.
@@ -109,7 +108,6 @@ Flat list:
 
 ```bash
 curl -X POST https://your-portal.example.com/api/content/bulk \
-  -H "Authorization: Bearer $BULK_UPLOAD_SECRET" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "idea",

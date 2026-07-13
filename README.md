@@ -23,6 +23,7 @@ A client portal for Own It Social built with Next.js (App Router), TypeScript, T
 **Integrations**
 - **Twilio SMS**: a daily cron job (see `vercel.json`, runs 15:00 UTC) texts clients who have tasks overdue or due within 24 hours (clients opt in by saving a mobile number on their Team page — at most one reminder per day per client), and teammate invites can be texted directly when a phone number is entered.
 - **OpenAI**: a "✨ Generate ideas" button on the content pages (client portal and admin client view) drafts five content ideas tailored to the client's business, tags, and existing content; any of them can be added to the content list with one click.
+- **Bulk content upload**: add many content ideas at once instead of one at a time — either paste them in the admin UI (client → Content → **Bulk add**) or push them from a script via `POST /api/content/bulk`. See [Bulk-uploading content ideas](#bulk-uploading-content-ideas).
 
 ## Setup
 
@@ -70,6 +71,74 @@ This app uses your **existing Firebase project** but only new, portal-specific c
 - **Invites** (`/portal/team` or admin → client → Team): generates a shareable `/join/<id>` link (valid 14 days). The teammate sets a name and password and lands in the same client account.
 - **Videos**: paste a Loom share link or Google Drive file link on a task or template — it renders as an embedded player. Drive files need link sharing enabled.
 - **Security**: Firestore/Storage rules scope every read and write by the `role` / `clientId` custom claims; privileged flows (signup, invites, role granting) run server-side with the Admin SDK.
+
+## Bulk-uploading content ideas
+
+Every week you draft a batch of ideas per client. Two ways to load them without
+adding each one by hand:
+
+**In the portal (paste):** open a client, go to the **Content** tab, and click
+**Bulk add**. Paste one idea per line — add optional details after a `|`:
+
+```
+5 signs your water heater is failing | Educational post, end with a service CTA
+Behind the scenes: a day with our install crew
+Customer spotlight: the Johnson family kitchen remodel
+```
+
+Pick the type/status once and they're all created together. Dates and links can
+be set later by editing an item.
+
+**By POST request (automation):** `POST /api/content/bulk` creates ideas for one
+or many clients in a single call — wire it to a spreadsheet export, Zapier/Make,
+or a cron script.
+
+- **Auth (either):**
+  - Set `BULK_UPLOAD_SECRET` in your environment and send it as
+    `Authorization: Bearer <secret>` or `X-API-Key: <secret>`.
+  - Or send an admin's Firebase ID token as `Authorization: Bearer <idToken>`.
+- **Reference clients** by `clientId` or by `clientName` (case-insensitive; the
+  name must be unique). Top-level `type`, `status`, `clientId`, and `clientName`
+  act as defaults every item inherits.
+- **Item fields:** `title` (required), `body`, `type`
+  (`idea` | `email_blast` | `blog_post` | `social_post`, default `idea`),
+  `status` (`idea` | `draft` | `scheduled` | `published`, default `idea`),
+  `scheduledDate` (`YYYY-MM-DD`), `link`.
+
+Flat list:
+
+```bash
+curl -X POST https://your-portal.example.com/api/content/bulk \
+  -H "Authorization: Bearer $BULK_UPLOAD_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "idea",
+    "items": [
+      { "clientName": "Joe'\''s Plumbing", "title": "5 signs your water heater is failing", "body": "Educational; end with a service CTA.", "scheduledDate": "2026-07-20" },
+      { "clientName": "Bright Smiles Dental", "title": "Meet the hygienists", "body": "Team intro reel." }
+    ]
+  }'
+```
+
+Grouped by client (handy for "8 ideas per client"):
+
+```json
+{
+  "clients": [
+    { "clientName": "Joe's Plumbing", "ideas": [ { "title": "Idea 1" }, { "title": "Idea 2" } ] },
+    { "clientId": "abc123",          "ideas": [ { "title": "Idea 1" } ] }
+  ]
+}
+```
+
+The response reports what happened, so a bad row never blocks the rest:
+
+```json
+{ "created": 3, "skipped": 1, "byClient": { "abc123": 2, "def456": 1 },
+  "errors": [ { "index": 4, "reason": "Could not find client \"Acme\"." } ] }
+```
+
+Up to 1000 items per request.
 
 ## Temporary legacy login mode (pre-launch)
 
